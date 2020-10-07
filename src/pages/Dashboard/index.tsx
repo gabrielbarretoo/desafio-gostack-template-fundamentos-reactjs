@@ -34,34 +34,18 @@ const Dashboard: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [balance, setBalance] = useState<Balance>({} as Balance);
 
-  function replaceAt(s: string, n: number, t: string): string {
-    return s.substring(0, n - 1) + t + s.substring(n);
-  }
-
-  function parseLocaleNumber(stringNumber: string): string {
-    const parseString = stringNumber.replace(',', '.');
-
-    const finalString = replaceAt(parseString, parseString.length - 2, ',');
-
-    return finalString;
-  }
-
   useEffect(() => {
     async function loadTransactions(): Promise<void> {
       const response = await api.get('/transactions');
 
       const transactionsFormatted = response.data.transactions.map(
         (transaction: Transaction) => {
-          const value = new Intl.NumberFormat('pt-BR', {
-            style: 'currency',
-            currency: 'BRL',
-          }).format(transaction.value);
           return {
             ...transaction,
             formattedValue:
               transaction.type === 'outcome'
-                ? `- ${parseLocaleNumber(value)}`
-                : `${parseLocaleNumber(value)}`,
+                ? `- ${formatValue(transaction.value)}`
+                : `${formatValue(transaction.value)}`,
             formattedDate: format(
               parseISO(transaction.created_at),
               'dd/MM/yyyy',
@@ -70,29 +54,14 @@ const Dashboard: React.FC = () => {
         },
       );
 
-      const parseIncome = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(response.data.balance.income);
-
-      const parseOutcome = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(response.data.balance.outcome);
-
-      const parseTotal = new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL',
-      }).format(response.data.balance.total);
-
-      const newBalance: Balance = {
-        income: parseLocaleNumber(parseIncome),
-        outcome: parseLocaleNumber(parseOutcome),
-        total: parseLocaleNumber(parseTotal),
+      const formatBalance: Balance = {
+        income: formatValue(response.data.balance.income),
+        outcome: formatValue(response.data.balance.outcome),
+        total: formatValue(response.data.balance.total),
       };
 
       setTransactions(transactionsFormatted);
-      setBalance(newBalance);
+      setBalance(formatBalance);
     }
 
     loadTransactions();
@@ -139,7 +108,7 @@ const Dashboard: React.FC = () => {
 
             <tbody>
               {transactions.map(transaction => (
-                <tr>
+                <tr key={transaction.id}>
                   <td className="title">{transaction.title}</td>
                   <td className={transaction.type}>
                     {transaction.formattedValue}
